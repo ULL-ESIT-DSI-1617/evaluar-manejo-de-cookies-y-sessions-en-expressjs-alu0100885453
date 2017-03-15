@@ -6,17 +6,23 @@ let express = require('express'),
 let cookieParser = require('cookie-parser');
 let path = require('path');
 let util = require("util");
+var bodyParser = require('body-parser');
 
 //
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.get('/login', function (req, res, next) {
-//res.send('Hola '+ req.params.nombredeusuario)
- // res.end(req.params.nombredeusuario);
- res.render('login');
-});
+
 //
+
+// middleware
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(session({
+  resave: false, // don't save session if unmodified
+  saveUninitialized: false, // don't create session until something stored
+  secret: 'shhhh, very secret'
+}));
 
 let bcrypt = require("bcrypt-nodejs");
 let hash = bcrypt.hashSync("amyspassword");
@@ -57,6 +63,10 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.get('/login', function (req, res, next) {
+ res.render('login');
+});
+
 // Authentication and Authorization Middleware
 let auth = function(req, res, next) {
   if (req.session && req.session.user in users)
@@ -66,19 +76,19 @@ let auth = function(req, res, next) {
 };
  
 // Login endpoint
-app.get('/login', function (req, res) {
-  console.log(req.query);
-  if (!req.query.username || !req.query.password) {
+app.post('/login', function (req, res) {
+  console.log(req.body);
+  if (!req.body.username || !req.body.password) {
     console.log('login failed');
     res.send('login failed');    
-  } else if(req.query.username in users  && 
-            bcrypt.compareSync(req.query.password, users[req.query.username])) {
-    req.session.user = req.query.username;
+  } else if(req.body.username in users  && 
+            bcrypt.compareSync(req.body.password, users[req.body.username])) {
+    req.session.user = req.body.username;
     req.session.admin = true;
     res.send(layout("login success! user "+req.session.user));
   } else {
-    console.log(`login ${util.inspect(req.query)} failed`);    
-    res.send(layout(`login ${util.inspect(req.query)} failed. You are ${req.session.user || 'not logged'}`));    
+    console.log(`login ${util.inspect(req.body)} failed`);    
+    res.send(layout(`login ${util.inspect(req.body)} failed. You are ${req.session.user || 'not logged'}`));    
   }
 });
  
